@@ -8,8 +8,9 @@ import { auth, provider } from "../utils/firebse";
 import axios from "axios";
 import { ServerUrl } from "../App";
 import { useDispatch } from "react-redux";
+import { setUserData } from "../redux/userSlice";
 
-function Auth() {
+function Auth({ isModel = false }) {
   const dispatch = useDispatch();
   const handleGoogleAuth = async () => {
     try {
@@ -29,12 +30,14 @@ function Auth() {
     }
   };
   return (
-    <div className="w-full min-h-screen bg-[#f3f3f3] flex items-center justify-center px-6 py-20">
+    <div
+      className={`w-full ${isModel ? "py-4" : "min-h-screen bg-[#f3f3f3] flex items-center justify-center px-6 py-20"} `}
+    >
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1.05 }}
-        className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 border border-gray-200"
+        className={`w-full ${isModel ? "max-w-md p-8 rounded-3xl" : "max-w-lg p-12 rounded-[32px]"} bg-white shadow-2xl border border-gray-200 `}
       >
         {/* Logo */}
         <div className="flex flex-col items-center justify-center mb-6 gap-3">
