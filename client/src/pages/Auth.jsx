@@ -71,6 +71,7 @@ function Auth({ isModel = false }) {
         <motion.button
           onClick={handleGoogleAuth}
           whileHover={{ opacity: 0.8, scale: 1.03 }}
+          whileTap={{ opacity: 1, scale: 0.98 }}
           className="w-full bg-black text-white py-3 rounded-xl font-medium hover:bg-gray-900 transition-all duration-300"
         >
           <FcGoogle size={20} className="inline-block mr-2" />
