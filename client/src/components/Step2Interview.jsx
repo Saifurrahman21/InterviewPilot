@@ -144,6 +144,21 @@ function Step2Interview(interviewData, onFinish) {
     runIntro();
   }, [selectedVoice, isIntroPhase, currentIndex]);
 
+  useEffect(() => {
+    if (isIntroPhase) return;
+    if (!currentQuestion) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isIntroPhase, currentQuestion]);
+
   return (
     <div className="min-h-screen bg-linear-to-br from-emerald-50 via-white to-teal-100 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-350 min-h-[80vh] bg-white rounded-3xl shadow-2xl border border-gray-200 flex flex-col lg:flex-row overflow-hidden">
@@ -184,7 +199,10 @@ function Step2Interview(interviewData, onFinish) {
             <div className="h-px bg-gray-200"></div>
 
             <div className="flex justify-center">
-              <Timer timeLeft={30} totalTime="60" />
+              <Timer
+                timeLeft={timeLeft}
+                totalTime={currentQuestion?.timeLimit || 60}
+              />
             </div>
 
             <div className="h-px bg-gray-200"></div>
