@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import maleVideo from "../assets/videos/male-ai.mp4";
 import femaleVideo from "../assets/videos/female-ai.mp4";
 import Timer from "./Timer";
@@ -68,6 +68,82 @@ function Step2Interview(interviewData, onFinish) {
 
   const videoSource = voiceGender === "male" ? maleVideo : femaleVideo;
 
+  // speak function
+  const speakText = (text) => {
+    return new Promise((resolve) => {
+      if (!window.speechSynthesis || !selectedVoice) {
+        resolve();
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      //Add natural pause after commas ans periods
+      const humanText = text.replace(/,/g, ", ... ").replace(/\./g, ", ... ");
+
+      const utterance = new SpeechSynthesisUtterance(humanText);
+
+      utterance.voice = selectedVoice;
+
+      //human like speech pattern
+      utterance.rate = 0.92; // slightly slower than normal
+      utterance.pitch = 1.05; //smallwarmth
+      utterance.volume = 1; // full volume
+
+      utterance.onstart = () => {
+        setIsAIPlaying(true);
+        videoRef.current?.play();
+      };
+
+      utterance.onend = () => {
+        videoRef.current?.pause();
+        videoRef.current.currentTime = 0;
+        setIsAIPlaying(false);
+
+        setTimeout(() => {
+          setSubtitle;
+          resolve();
+        }, 300);
+      };
+      setSubtitle(text);
+    });
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    if (!selectedVoice) {
+      return;
+    }
+    const runIntro = async () => {
+      if (isIntroPhase) {
+        await speakText(
+          `Hi ${userName}, it's great to meet you today. I hope you're feeling confident and ready.`,
+        );
+
+        await speakText(
+          "I'll ask you a few questions. Just answer naturally, and take your time. Let's begin.",
+        );
+
+        setIsIntroPhase(false);
+      } else if (currentQuestion) {
+        await new Promise((r) => setTimeout(r, 800));
+
+        // If last question (hard level)
+        if (currentIndex === questions.length - 1) {
+          await speakText("Alright, this one might be a bit more challenging.");
+        }
+
+        await speakText(currentQuestion.question);
+
+        if (isMicOn) {
+          startMic();
+        }
+      }
+    };
+
+    runIntro();
+  }, [selectedVoice, isIntroPhase, currentIndex]);
+
   return (
     <div className="min-h-screen bg-linear-to-br from-emerald-50 via-white to-teal-100 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-350 min-h-[80vh] bg-white rounded-3xl shadow-2xl border border-gray-200 flex flex-col lg:flex-row overflow-hidden">
@@ -86,14 +162,23 @@ function Step2Interview(interviewData, onFinish) {
           </div>
 
           {/* subtitle */}
+          {subtitle && (
+            <div className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+              <p className="text-gray-700 text-sm sm:text-base font-medium text-center leading-relaxed">
+                {subtitle}
+              </p>
+            </div>
+          )}
 
           {/* timer Area */}
           <div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-md p-6 space-y-5">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-500">Interview Status</span>
-              <span className="text-sm font-semibold text-emerald-600">
-                AI speaking
-              </span>
+              {isAIPlaying && (
+                <span className="text-sm font-semibold text-emerald-600">
+                  {isAIPlaying ? "AI speaking" : ""}
+                </span>
+              )}
             </div>
 
             <div className="h-px bg-gray-200"></div>
@@ -128,15 +213,17 @@ function Step2Interview(interviewData, onFinish) {
             AI Smart Interview
           </h2>
 
-          <div className="relative mb-6 bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <p className="text-xs sm:text-sm text-gray-400 mb-2">
-              Question {currentIndex + 1} of {questions.length}
-            </p>
+          {!isIntroPhase && (
+            <div className="relative mb-6 bg-gray-50 p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm">
+              <p className="text-xs sm:text-sm text-gray-400 mb-2">
+                Question {currentIndex + 1} of {questions.length}
+              </p>
 
-            <div className="text-base sm:text-lg font-semibold text-gray-800 leading-relaxed ">
-              {currentQuestion?.question}
+              <div className="text-base sm:text-lg font-semibold text-gray-800 leading-relaxed ">
+                {currentQuestion?.question}
+              </div>
             </div>
-          </div>
+          )}
 
           <textarea
             placeholder="Type your answer here..."
