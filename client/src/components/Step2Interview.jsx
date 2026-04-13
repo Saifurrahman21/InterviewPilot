@@ -4,6 +4,12 @@ import femaleVideo from "../assets/videos/female-ai.mp4";
 import Timer from "./Timer";
 import { motion } from "motion/react";
 import { FaMicrophone } from "react-icons/fa";
+import { FaMicrophoneSlash } from "react-icons/fa";
+import { BsArrowRight } from "react-icons/bs";
+import { useRef } from "react";
+import { useState } from "react";
+import { useEffect } from "react";
+import axios from "axios";
 
 function Step2Interview(interviewData, onFinish) {
   const { interviewId, questions, userName } = interviewData;
@@ -14,6 +20,7 @@ function Step2Interview(interviewData, onFinish) {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answer, setAnswer] = useState("");
+  const [feedback, setFeedback] = useState("");
   const [timeLeft, setTimeLeft] = useState(questions[0]?.timeLimit || 60);
 
   const [selectedVoice, setSelectedVoice] = useState(null);
@@ -92,6 +99,7 @@ function Step2Interview(interviewData, onFinish) {
 
       utterance.onstart = () => {
         setIsAIPlaying(true);
+        stopMic();
         videoRef.current?.play();
       };
 
@@ -99,6 +107,10 @@ function Step2Interview(interviewData, onFinish) {
         videoRef.current?.pause();
         videoRef.current.currentTime = 0;
         setIsAIPlaying(false);
+
+        if (isMicOn) {
+          startMic();
+        }
 
         setTimeout(() => {
           setSubtitle;
@@ -147,6 +159,7 @@ function Step2Interview(interviewData, onFinish) {
   useEffect(() => {
     if (isIntroPhase) return;
     if (!currentQuestion) return;
+    if (isSubmitting) return;
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -157,8 +170,75 @@ function Step2Interview(interviewData, onFinish) {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isIntroPhase, currentQuestion]);
+  }, [isIntroPhase, currentQuestion, isSubmitting]);
 
+  useEffect(() => {
+    if (!("webkitSpeechRecognition" in window)) return;
+
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.oneResult = (event) => {
+      const transcript = event.results[event.results.length - 1].transcript;
+      setAnswer((prev) => prev + " " + transcript);
+    };
+
+    recognitionRef.current = recognition;
+  }, []);
+
+  const startMic = () => {
+    if (recognitionRef.current && !isAIPlaying) {
+      try {
+        recognitionRef.current.start();
+      } catch (e) {
+        console.error("Speech recognition error:", e);
+      }
+    }
+  };
+
+  const stopMic = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+  };
+
+  const toggleMic = () => {
+    if (isMicOn) {
+      stopMic();
+    } else {
+      startMic();
+    }
+    setIsMicOn(!isMicOn);
+  };
+
+  const submitAnswer = async () => {
+    if (isSubmitting) return;
+    stopMic();
+    setIsSubmitting(true);
+    try {
+      const result = await axios.post(
+        ServerUrl + "/api/interview/submit-answer",
+        {
+          interviewId,
+          questionIndex: currentIndex,
+          answer,
+          timeTaken: currentQuestion.timeLimit - timeLeft,
+        },
+        { withCredentials: true },
+      );
+
+      setFeedback(result.data.feedback);
+      speakText(result.data.feedback);
+      setIsSubmitting(false);
+    } catch (error) {
+      console.log(error);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleNext = () => {
   return (
     <div className="min-h-screen bg-linear-to-br from-emerald-50 via-white to-teal-100 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-350 min-h-[80vh] bg-white rounded-3xl shadow-2xl border border-gray-200 flex flex-col lg:flex-row overflow-hidden">
@@ -245,24 +325,46 @@ function Step2Interview(interviewData, onFinish) {
 
           <textarea
             placeholder="Type your answer here..."
+            onChange={(e) => setAnswer(e.target.value)}
+            value={answer}
             className="flex-1 bg-gray-100 p-4 sm:p-6 rounded-2xl resize-none outline-none border border-gray-200 focus:ring-2 focus:ring-emerald-500 transition text-gray-800"
           ></textarea>
 
-          <div className="flex item-center gap-4 mt-6">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black text-white shadow-lg"
-            >
-              <FaMicrophone size={20} />
-            </motion.button>
+          {!feedback ? (
+            <div className="flex item-center gap-4 mt-6">
+              <motion.button
+                onClick={toggleMic}
+                whileTap={{ scale: 0.9 }}
+                className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full bg-black text-white shadow-lg"
+              >
+                {isMicOn ? <FaMicrophone size={20} /> : <FaMicrophoneSlash size={20} />}
+              </motion.button>
 
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500"
+              <motion.button
+                onClick={submitAnswer}
+                disabled={isSubmitting}
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 sm:py-4 rounded-2xl shadow-lg hover:opacity-90 transition font-semibold disabled:bg-gray-500"
+              >
+                {isSubmitting ? "Submitting..." : "Submit Answer"}
+              </motion.button>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 bg-emerald-50 border border-emerald-200 p-5 rounded-2xl shadow-sm"
             >
-              Submit Answer
-            </motion.button>
-          </div>
+              <p className="text-emerald-700 font-medium mb-4">{feedback}</p>
+
+              <button
+                onClick={handleNext}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 text-white py-3 rounded-xl shadow-md hover:opacity-90 transition flex items-center justify-center gap-1"
+              >
+                Next Question <BsArrowRight size={18} />
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
