@@ -8,6 +8,7 @@ import { useDispatch } from "react-redux";
 import { setUserData } from "./redux/userSlice";
 import InterviewPage from "./pages/InterviewPage";
 import InterviewHistory from "./pages/InterviewHistory";
+import Pricing from "./pages/Pricing";
 
 import InterviewReport from "./pages/InterviewReport";
 
@@ -35,6 +36,7 @@ function App() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/interview" element={<InterviewPage />} />
       <Route path="/history" element={<InterviewHistory />} />
+      <Route path="/pricing" element={<Pricing />} />
       <Route path="/report/:id" element={<InterviewReport />} />
     </Routes>
   );
