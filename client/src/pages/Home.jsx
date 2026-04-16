@@ -27,6 +27,10 @@ function Home() {
   const { userData } = useSelector((state) => state.user);
   const [showAuth, setShowAuth] = useState(false);
   const navigate = useNavigate();
+
+  const userBalance = userData?.credits || 0;
+  const requiredAmount = 50;
+
   return (
     <div className="min-h-screen bg-[#f3f3f3] flex flex-col">
       <Navbar />
@@ -67,10 +71,20 @@ function Home() {
             <div className="flex flex-wrap justify-center gap-4 mt-10">
               <motion.button
                 onClick={() => {
+                  // 1. Pehle check login
                   if (!userData) {
                     setShowAuth(true);
                     return;
                   }
+
+                  // 2. Phir balance check
+                  if (userBalance < requiredAmount) {
+                    alert("Insufficient balance. Redirecting to payment...");
+                    navigate("/pricing");
+                    return;
+                  }
+
+                  // 3. Sab sahi → interview start
                   navigate("/interview");
                 }}
                 whileHover={{ opacity: 0.9, scale: 1.03 }}
