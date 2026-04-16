@@ -1,6 +1,4 @@
 import mongoose from "mongoose";
-import { use } from "react";
-import razorpay from "../services/razorpay.service";
 const paymentSchema = new mongoose.Schema(
   {
     userId: {
